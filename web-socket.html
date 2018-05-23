@@ -56,10 +56,7 @@ The `web-socket` element ease the usage of WebSockets.
           /**
            * Specifies the format in which the data is send.
            */
-          handleAs: {
-            type: String,
-            value: 'json'
-          },
+          handleAs: String,
           /**
            * The current state of the WebSocket connection.
            * Notifies about state changes according to https://developer.mozilla.org/en/docs/Web/API/WebSocket#Ready_state_constants
@@ -141,6 +138,8 @@ The `web-socket` element ease the usage of WebSockets.
         if (this.verbose) {
           console.info(this.id + " : WebSocket to [%s] established.", this.url, event);
         }
+
+        this.dispatchEvent(new CustomEvent('open', {bubbles: true, composed: true}));
       }
 
       /**
@@ -151,10 +150,14 @@ The `web-socket` element ease the usage of WebSockets.
         if (event.wasClean === true) {
           if (this.verbose) {
             console.info(this.id + " : WebSocket [%s] closed.", this.url, event);
+            this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true}));
           }
         } else {
           if (this.verbose) {
             console.warn(this.id + " : WebSocket [%s] was closed.", this.url, event);
+            this.dispatchEvent(new CustomEvent('close', {bubbles: true, composed: true, 
+              detail: event.reason
+            }));
           }
         }
       }
@@ -166,7 +169,11 @@ The `web-socket` element ease the usage of WebSockets.
         if (this.verbose) {
           console.info(this.id + " : WebSocket [%s] received message.", this.url, event);
         }
-        this._setLastResponse(JSON.parse(event.data));
+        this._setLastResponse(this.handleAs === 'json' ? JSON.parse(event.data) : event.data);
+
+        this.dispatchEvent(new CustomEvent('message', {bubbles: true, composed: true, 
+          detail: this.handleAs === 'json' ? JSON.parse(event.data) : event.data
+        }));
       }
 
       /**
@@ -177,6 +184,10 @@ The `web-socket` element ease the usage of WebSockets.
           console.error(this.id + " : WebSocket to [%s] returns error.", this.url, event);
         }
         this._setLastError(event);
+        
+        this.dispatchEvent(new CustomEvent('error', {bubbles: true, composed: true, 
+          detail: event
+        }));
       }
 
       /**
