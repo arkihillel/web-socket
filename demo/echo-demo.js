@@ -1,0 +1,174 @@
+import '../../../@polymer/polymer/polymer-legacy.js';
+import '../../../@polymer/iron-demo-helpers/demo-pages-shared-styles.js';
+import '../../../@polymer/iron-demo-helpers/demo-snippet.js';
+import '../../../@polymer/iron-input/iron-input.js';
+import '../../../@polymer/paper-input/paper-input.js';
+import '../../../@polymer/paper-input/paper-input-container.js';
+import '../../../@polymer/paper-input/paper-input-error.js';
+import '../../../@polymer/paper-button/paper-button.js';
+import '../web-socket.js';
+import { PolymerElement } from '../../../@polymer/polymer/polymer-element.js';
+const $_documentContainer = document.createElement('template');
+$_documentContainer.setAttribute('style', 'display: none;');
+
+$_documentContainer.innerHTML = `<dom-module id="echo-demo">
+  <template strip-whitespace="">
+    <style>
+      :host() {
+        display: inline-block;
+      }
+      .container {
+        display: inline-flex;
+        align-items: center;
+        width: 100%;
+      }
+      paper-button#connect {
+        padding-left: 24px;
+        padding-right: 24px;
+        background-color: var(--state-color, var(--paper-orange-500));
+      }
+      input {
+        outline: none;
+        box-shadow: none;
+        padding: 0;
+        width: 100%;
+        max-width: 100%;
+        background: transparent;
+        border: none;
+        color: var(--paper-input-container-input-color, var(--primary-text-color));
+        -webkit-appearance: none;
+        text-align: inherit;
+        vertical-align: bottom;
+        /* Firefox sets a min-width on the input, which can cause layout issues */
+        min-width: 0;
+        @apply --paper-font-subhead;
+        @apply --paper-input-container-input;
+      }
+      paper-input-container {
+        width: 100%;
+      }
+      paper-input {
+        width: 100%;
+      }
+    </style>
+    <web-socket id="ws" auto="" url="[[url]]" state="{{state}}" last-response="{{response}}" last-error="{{error}}" verbose="">
+    </web-socket>
+    <div class="container">
+      <paper-input-container always-float-label="" auto-validate="" attr-for-value="url">
+        <label slot="label">URL</label>
+        <iron-input slot="input" bind-value="{{url}}">
+          <input value="{{url::input}}">
+        </iron-input>
+        <paper-input-error id="error" slot="add-on">Failed to establish connection.</paper-input-error>
+      </paper-input-container>
+      <paper-button id="connect" raised="" on-click="_toggleConnectionState"></paper-button>
+    </div>
+    <template is="dom-repeat" items="[[messages]]">
+      <pre>[[item.author]]: [[item.text]]</pre>
+    </template>
+    <paper-input id="input" autofocus="" value="{{message}}"></paper-input>
+    <paper-button raised="" on-click="_send">Send</paper-button>
+  </template>
+  
+</dom-module>`;
+
+document.head.appendChild($_documentContainer.content);
+class EchoDemo extends PolymerElement {
+
+  static get is() {
+    return 'echo-demo';
+  }
+
+  static get properties() {
+    return {
+      url: {
+        type: String,
+        value: 'wss://echo.websocket.org/',
+        observer: '_handleUrlChanges',
+        notify: true
+      },
+      messages: {
+        type: Array,
+        value: [],
+        notify: true
+      },
+      state: {
+        type: Number,
+        observer: '_handleWSStateChanges',
+        notify: true
+      },
+      response: {
+        type: Object,
+        observer: '_handleResponse'
+      },
+      error: {
+        type: Object,
+        observer: '_handleError'
+      }
+    };
+  }
+
+  _toggleConnectionState() {
+
+    if (this.state === 1) {
+      this.$.ws.close();
+    } else {
+      this.$.ws.open();
+    }
+    this.$.input.focus();
+  }
+
+  _send() {
+
+    this.$.ws.send(this.message);
+    this.push('messages', {
+      author: 'you',
+      text: this.message
+    });
+    this.message = '';
+    this.$.input.focus();
+  }
+
+  _handleUrlChanges() {
+
+    if (this.$.ws.state === 1) {
+      this.$.ws.close();
+    }
+    // overwrite any error messages before
+    this.$.error.update({invalid: false});
+  }
+
+  _handleWSStateChanges() {
+
+    var _color = 'var(--paper-orange-500)';
+    switch (this.state) {
+      case 1:
+        _color = 'var(--paper-green-500)';
+        this.$.connect.innerHTML = 'ON';
+        break;
+      case 3:
+        _color = 'var(--paper-red-500)';
+        this.$.connect.innerHTML = 'OFF';
+        break;
+      default:
+        this.$.connect.innerHTML = '[x]';
+    }
+    this.updateStyles({
+      '--state-color': _color
+    });
+  }
+
+  _handleResponse() {
+
+    this.push('messages', {
+      author: 'server',
+      text: this.response
+    });
+  }
+
+  _handleError() {
+
+    this.$.error.update({invalid: true});
+  }
+}
+window.customElements.define(EchoDemo.is, EchoDemo);
