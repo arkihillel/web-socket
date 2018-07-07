@@ -1,7 +1,7 @@
 {
   "description": "A Polymer element to ease the usage of Websockets.",
   "name": "@hillel/web-scoket",
-  "version": "",
+  "version": "3.0.0-pre.1",
   "resolutions": {
     "inherits": "2.0.3",
     "samsam": "1.1.3",
