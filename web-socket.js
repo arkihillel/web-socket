@@ -137,7 +137,7 @@ class WebSocket extends PolymerElement {
    * Closes WebSocket connection when element is detached from document.
    */
   disconnectedCallback() {
-    close();
+    this.close();
   }
 
   /**
