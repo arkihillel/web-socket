@@ -1,34 +1,5 @@
-/**
-The `web-socket` element ease the usage of WebSockets.
-
-@customElement
-@polymer
-@demo demo/index.html
-*/
-/*
-  FIXME(polymer-modulizer): the above comments were extracted
-  from HTML and may be out of place here. Review them and
-  then delete this comment!
-*/
-import '../../@polymer/polymer/polymer-legacy.js';
-
 import { PolymerElement } from '../../@polymer/polymer/polymer-element.js';
-const $_documentContainer = document.createElement('template');
-$_documentContainer.setAttribute('style', 'display: none;');
 
-$_documentContainer.innerHTML = `<dom-module id="web-socket">
-  <template strip-whitespace="">
-    <style>
-      :host() {
-        display: none;
-      }
-    </style>
-  </template>
-
-  
-</dom-module>`;
-
-document.head.appendChild($_documentContainer.content);
 // constant values according to https://developer.mozilla.org/en-US/docs/Web/API/WebSocket#Ready_state_constants
 const CONNECTING = 0;
 const OPEN = 1;
@@ -49,6 +20,20 @@ class WebSocket extends PolymerElement {
       auto: {
         type: Boolean,
         value: false
+      },
+      /**
+       * Enables auto reconnection connection when the web socket abnormally closes
+       */
+      autoReconnect: {
+        type: Boolean,
+        value: true
+      },
+      /**
+       * Time interval for auto reconnection
+       */
+      autoReconnectInterval: {
+        type: Number,
+        value: 1000
       },
       /**
        * The URL to which to connect
@@ -158,6 +143,11 @@ class WebSocket extends PolymerElement {
    */
   onClose(event) {
     this._notifyStateChange();
+
+    // see event codes here: https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
+    if(event.code !== 1000)
+      this._reconnect();
+
     if (event.wasClean === true) {
       if (this.verbose) {
         console.info(this.id + " : WebSocket [%s] closed.", this.url, event);
@@ -191,6 +181,10 @@ class WebSocket extends PolymerElement {
    * Callback function that's called when an error occurs.
    */
   onError(event) {
+
+    if(event.code !== 'ECONNREFUSED')
+      this._reconnect();
+
     if (this.verbose) {
       console.error(this.id + " : WebSocket to [%s] returns error.", this.url, event);
     }
@@ -199,6 +193,14 @@ class WebSocket extends PolymerElement {
     this.dispatchEvent(new CustomEvent('error', {bubbles: true, composed: true, 
       detail: event
     }));
+  }
+
+  _reconnect() {
+    if(!this.autoReconnect) return;
+
+    setTimeout(function(){
+      this._getWebSocket()
+    }.bind(this), this.autoReconnectInterval);
   }
 
   /**
