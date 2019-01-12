@@ -181,18 +181,18 @@ class WebSocket extends PolymerElement {
    * Callback function that's called when an error occurs.
    */
   onError(event) {
+    this.dispatchEvent(new CustomEvent('error', {bubbles: true, composed: true, 
+      detail: event
+    }));
 
-    if(event.code !== 'ECONNREFUSED')
-      this._reconnect();
+    this._setLastError(event);
 
     if (this.verbose) {
       console.error(this.id + " : WebSocket to [%s] returns error.", this.url, event);
     }
-    this._setLastError(event);
-    
-    this.dispatchEvent(new CustomEvent('error', {bubbles: true, composed: true, 
-      detail: event
-    }));
+
+    if(event.code !== 'ECONNREFUSED')
+      this._reconnect();
   }
 
   _reconnect() {
